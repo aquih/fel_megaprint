@@ -8,6 +8,9 @@
             <field name="inherit_id" ref="fel_gt.invoice_form_fel_gt"/>
             <field name="arch" type="xml">
                 <data>
+                    <button name="button_draft" position="after">
+                        <button name="certificar" id="certificar" string="Certificar FEL" type="object" attrs="{'invisible' : [('firma_fel', '!=', False)]}"/>
+                    </button>
                     <field name="resultado_xml_fel" position="after">
                         <field name="name_pdf_fel" invisible="1"/>
                         <field name="pdf_fel" filename="name_pdf_fel"/>
@@ -23,7 +26,6 @@
             <field name="arch" type="xml">
                 <data>
                     <field name="tipo_documento_fel" position="after">
-                        <field name="generar_fel"/>
                     </field>
                 </data>
             </field>
