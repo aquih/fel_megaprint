@@ -3,7 +3,7 @@
     <data>
 
         <record model="ir.ui.view" id="view_move_form">
-            <field name="name"account.move.form.inherit.fel_megaprint</field>
+            <field name="name">account.move.form.inherit.fel_megaprint</field>
             <field name="model">account.move</field>
             <field name="inherit_id" ref="fel_gt.view_move_form"/>
             <field name="arch" type="xml">
