@@ -158,11 +158,6 @@ class AccountMove(models.Model):
                     raise UserError(r.text)
                     
         return result
-                
-class AccountJournal(models.Model):
-    _inherit = "account.journal"
-
-    generar_fel = fields.Boolean('Generar FEL',)
 
 class ResCompany(models.Model):
     _inherit = "res.company"
