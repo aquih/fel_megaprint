@@ -11,6 +11,11 @@
     'data': [
         'views/account_views.xml',
     ],
+    'assets':{
+        'point_of_sale._assets_pos': [
+            'fel_megaprint/static/src/**/*',
+        ],
+    },
     'demo': [],
     'installable': True
 }
