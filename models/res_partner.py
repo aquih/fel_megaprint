@@ -10,13 +10,18 @@ import logging
 class Partner(models.Model):
     _inherit = 'res.partner'
 
-    def obtener_partner_name_con_datos_sat(self, company_id, vat):
-        if vat:
-            company = self.env['res.company'].search([('id', '=', company_id)])
-            datos_facturacion_fel = self._datos_sat(company, vat)
-            if(not datos_facturacion_fel.get('nombre', {})):
-                datos_facturacion_fel = self.env['res.partner']._datos_sat_cui(company, vat)
-        return datos_facturacion_fel
+    def obtener_nombre_facturacion_fel(self, company_id=None, vat=None):
+        if not vat:
+            vat = self.vat
+            if self.nit_facturacion_fel:
+                vat = self.nit_facturacion_fel
+        company = self.env['res.company'].search([('id', '=', company_id)]) if company_id else self.env.company
+        
+        res = self._datos_sat(company, vat)
+        if(not res.get('nombre', {})):
+            res = self._datos_sat_cui(company, vat)
+        self.nombre_facturacion_fel = res['nombre'] or ''
+        return res
     
     def _datos_sat(self, company, vat):
         res = {'nombre': '', 'nit': '', 'mensaje': ''}
