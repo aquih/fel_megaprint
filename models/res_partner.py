@@ -10,108 +10,89 @@ import logging
 class Partner(models.Model):
     _inherit = 'res.partner'
 
-    def obtener_nombre_facturacion_fel(self, company_id=None, vat=None):
-        if not vat:
-            vat = self.vat
-            if self.nit_facturacion_fel:
-                vat = self.nit_facturacion_fel
-        company = self.env['res.company'].search([('id', '=', company_id)]) if company_id else self.env.company
-        
-        res = self._datos_sat(company, vat)
-        if(not res.get('nombre', {})):
-            res = self._datos_sat_cui(company, vat)
-        self.nombre_facturacion_fel = res['nombre'] or ''
+    def guardar_nombre_facturacion_fel(self):
+        vat = self.vat
+        if self.nit_facturacion_fel:
+            vat = self.nit_facturacion_fel
+            
+        res = self.obtener_datos_facturacion_fel(self.env.company, vat)
+        self.nombre_facturacion_fel = res['nombre']
+
+    def obtener_datos_facturacion_fel(self, company, vat):
+        res = self._datos_sat(self.env.company, vat)
+        if not res['nombre']:
+            res = self._datos_sat_cui(self.env.company, vat)
         return res
     
     def _datos_sat(self, company, vat):
-        res = {'nombre': '', 'nit': '', 'mensaje': ''}
-        if vat:
-            request_url = "apiv2"
-            request_path = ""
-            if company.pruebas_fel:
-                request_url = "dev2.api"
-                request_path = ""
-            
-            headers = { "Content-Type": "application/xml" }
-            data = '<?xml version="1.0" encoding="UTF-8"?><SolicitaTokenRequest><usuario>{}</usuario><apikey>{}</apikey></SolicitaTokenRequest>'.format(company.usuario_fel, company.clave_fel)
-            r = requests.post('https://'+request_url+'.ifacere-fel.com/'+request_path+'api/solicitarToken', data=data.encode('utf-8'), headers=headers)
-            try: 
-                resultadoXML = etree.XML(bytes(r.text, encoding='utf-8'))
-            except Exception as e:
-                logging.warning(f"Error al procesar respuesta: {e}")
-                res['mensaje'] = 'No se pudo procesar la respuesta de token.'
-                return res 
+        request_url = "apiv2"
+        request_path = ""
+        if company.pruebas_fel:
+            request_url = "dev2.api"
+        headers = { "Content-Type": "application/xml" }
+        data = '<?xml version="1.0" encoding="UTF-8"?><SolicitaTokenRequest><usuario>{}</usuario><apikey>{}</apikey></SolicitaTokenRequest>'.format(company.usuario_fel, company.clave_fel)
+        resultado_certificador_token = requests.post('https://'+request_url+'.ifacere-fel.com/'+request_path+'api/solicitarToken', data=data.encode('utf-8'), headers=headers)
+        logging.info(resultado_certificador_token.text)
 
-            if len(resultadoXML.xpath("//token")) > 0:
-                token = resultadoXML.xpath("//token")[0].text
+        datos_contribuyente = { 'nombre': '', 'nit': '', 'mensaje': '' }
+
+        try:
+            resultado_token_XML = etree.XML(bytes(resultado_certificador_token.text, encoding='utf-8'))
+            if len(resultado_token_XML.xpath("//token")) > 0:
+                token = resultado_token_XML.xpath("//token")[0].text
 
                 headers = { "Content-Type": "application/xml", "authorization": "Bearer "+token }
                 data = '<?xml version="1.0" encoding="UTF-8"?><RetornaDatosClienteRequest><nit>{}</nit></RetornaDatosClienteRequest>'.format(vat)
-                r = requests.post('https://'+request_url+'.ifacere-fel.com/'+request_path+'api/retornarDatosCliente', data=data.encode('utf-8'), headers=headers)
-                logging.warning(r.text)
+                resultado_certificador = requests.post('https://'+request_url+'.ifacere-fel.com/'+request_path+'api/retornarDatosCliente', data=data.encode('utf-8'), headers=headers)
+                logging.info(resultado_certificador.text)
 
-                try:
-                    resultadoXML = etree.XML(bytes(r.text, encoding='utf-8'))
-                    if len(resultadoXML.xpath("//listado_errores")) == 0:
-                        if resultadoXML.xpath("//nombre"):
-                            res['nombre'] = resultadoXML.xpath("//nombre")[0].text
-                            res['nit'] = vat
-                            logging.warning(res)
-                            return res
-                    else:
-                        res['mensaje'] =  "\n".join(f"{error.findtext('cod_error')}: {error.findtext('desc_error')}" for error in resultadoXML.xpath("//listado_errores/error"))
-                        logging.warning(res)
-                        return res
+                resultado_certificador_XML = etree.XML(bytes(resultado_certificador.text, encoding='utf-8'))
+                
+                if len(resultado_certificador_XML.xpath("//listado_errores")) == 0:
+                    if resultado_certificador_XML.xpath("//nombre"):
+                        datos_contribuyente['nombre'] = resultado_certificador_XML.xpath("//nombre")[0].text
+                        datos_contribuyente['nit'] = vat
+                else:
+                    datos_contribuyente['mensaje'] =  "\n".join(f"{error.findtext('cod_error')}: {error.findtext('desc_error')}" for error in resultado_certificador_XML.xpath("//listado_errores/error"))
 
-                except Exception as e:
-                    logging.warning(f"Error al procesar respuesta: {e}")
-                    res['mensaje'] = 'No se pudo procesar la respuesta.'
-                    return res
-        res['mensaje'] = 'No encontrado'
-        return res
+        except Exception as e:
+            logging.warning(e)
+            datos_contribuyente['mensaje'] = e
+
+        return datos_contribuyente
 
     def _datos_sat_cui(self, company, cui):
-        res = {'nombre': '', 'nit': '', 'mensaje': ''}
-        if cui:
-            request_url = "apiv2"
-            if company.pruebas_fel:
-                request_url = "dev2.api"
-            
-            headers = { "Content-Type": "application/xml" }
-            data = '<?xml version="1.0" encoding="UTF-8"?><SolicitaTokenRequest><usuario>{}</usuario><apikey>{}</apikey></SolicitaTokenRequest>'.format(company.usuario_fel, company.clave_fel)
-            r = requests.post('https://'+request_url+'.ifacere-fel.com/api/solicitarToken', data=data.encode('utf-8'), headers=headers)
-            
-            try: 
-                resultadoXML = etree.XML(bytes(r.text, encoding='utf-8'))
-            except Exception as e:
-                logging.warning(f"Error al procesar respuesta: {e}")
-                res['mensaje'] = 'No se pudo procesar la respuesta de token.'
-                return res 
+        request_url = "apiv2"
+        if company.pruebas_fel:
+            request_url = "dev2.api"
+        
+        headers = { "Content-Type": "application/xml" }
+        data = '<?xml version="1.0" encoding="UTF-8"?><SolicitaTokenRequest><usuario>{}</usuario><apikey>{}</apikey></SolicitaTokenRequest>'.format(company.usuario_fel, company.clave_fel)
+        resultado_certificador_token = requests.post('https://'+request_url+'.ifacere-fel.com/api/solicitarToken', data=data.encode('utf-8'), headers=headers)
+        logging.info(resultado_certificador_token.text)
 
-            if len(resultadoXML.xpath("//token")) > 0:
-                token = resultadoXML.xpath("//token")[0].text
+        datos_contribuyente = { 'nombre': '', 'nit': '', 'mensaje': '' }
+
+        try:
+            resultado_token_XML = etree.XML(bytes(resultado_certificador_token.text, encoding='utf-8'))
+            if len(resultado_token_XML.xpath("//token")) > 0:
+                token = resultado_token_XML.xpath("//token")[0].text
 
                 headers = { "Content-Type": "application/xml", "authorization": "Bearer "+token }
                 data = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><RetornaDatosClienteRequestCUI><CUI>{}</CUI></RetornaDatosClienteRequestCUI>'.format(cui)
-                r = requests.post('https://'+request_url+'.ifacere-fel.com/api/retornarDatosClienteCui', data=data.encode('utf-8'), headers=headers)
-                logging.warning(r.text)
+                resultado_certificador = requests.post('https://'+request_url+'.ifacere-fel.com/api/retornarDatosClienteCui', data=data.encode('utf-8'), headers=headers)
+                logging.info(resultado_certificador.text)
 
-                try: 
-                    resultadoXML = etree.XML(bytes(r.text, encoding='utf-8'))
-                    if len(resultadoXML.xpath("//listado_errores")) == 0:
-                        if resultadoXML.xpath("//nombre"):
-                            res['nombre'] = resultadoXML.xpath("//nombre")[0].text
-                            res['nit'] = cui
-                            logging.warning(res)
-                            return res
-                    else:
-                        res['mensaje'] =  "\n".join(f"{error.findtext('cod_error')}: {error.findtext('desc_error')}" for error in resultadoXML.xpath("//listado_errores/error"))
-                        logging.warning(res)
-                        return res
-                    
-                except Exception as e:
-                    logging.warning(f"Error al procesar respuesta: {e}")
-                    res['mensaje'] = 'No se pudo procesar la respuesta.'
-                    return res
-        res['mensaje'] = 'No encontrado'
-        return res
+                resultado_certificador_XML = etree.XML(bytes(resultado_certificador.text, encoding='utf-8'))
+                if len(resultado_certificador_XML.xpath("//listado_errores")) == 0:
+                    if resultado_certificador_XML.xpath("//nombre"):
+                        datos_contribuyente['nombre'] = resultado_certificador_XML.xpath("//nombre")[0].text
+                        datos_contribuyente['nit'] = cui
+                else:
+                    datos_contribuyente['mensaje'] =  "\n".join(f"{error.findtext('cod_error')}: {error.findtext('desc_error')}" for error in resultado_certificador_XML.xpath("//listado_errores/error"))
+
+        except Exception as e:
+            logging.warning(e)
+            datos_contribuyente['mensaje'] = e
+
+        return datos_contribuyente
