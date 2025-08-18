@@ -2,7 +2,7 @@
 
 {
     'name': 'FEL Megaprint',
-    'version': '1.3,
+    'version': '1.3',
     'category': 'Custom',
     'description': """ Integración con factura electrónica de Megaprint """,
     'author': 'Rodrigo Fernandez',
