@@ -33,10 +33,10 @@ class AccountMove(models.Model):
                     return
                 
                 dte = factura.dte_documento()
-                logging.warn(dte)
+                logging.warning(dte)
                 xml_sin_firma = etree.tostring(dte, encoding="UTF-8").decode("utf-8")
                 xmls_base64 = base64.b64encode(xml_sin_firma.encode("utf-8"))
-                logging.warn(xml_sin_firma)
+                logging.warning(xml_sin_firma)
 
                 request_url = "apiv2"
                 request_path = ""
@@ -73,7 +73,7 @@ class AccountMove(models.Model):
 
                             headers = { "Content-Type": "application/xml", "authorization": "Bearer "+token }
                             data = '<?xml version="1.0" encoding="UTF-8"?><RegistraDocumentoXMLRequest id="{}"><xml_dte><![CDATA[{}]]></xml_dte></RegistraDocumentoXMLRequest>'.format(uuid_factura, xml_con_firma)
-                            logging.warn(data)
+                            logging.warning(data)
                             r = requests.post('https://'+request_url+'.ifacere-fel.com/'+request_path+'api/registrarDocumentoXML', data=data.encode('utf-8'), headers=headers)
                             resultadoXML = etree.XML(bytes(r.text, encoding='utf-8'))
 
@@ -116,7 +116,7 @@ class AccountMove(models.Model):
         for factura in self:
             if factura.requiere_certificacion() and factura.firma_fel:
                 dte = factura.dte_anulacion()
-                logging.warn(dte)
+                logging.warning(dte)
                 xml_sin_firma = etree.tostring(dte, encoding="UTF-8").decode("utf-8")
 
                 request_url = "apiv2"
@@ -139,14 +139,14 @@ class AccountMove(models.Model):
                     headers = { "Content-Type": "application/xml", "authorization": "Bearer "+token }
                     data = '<?xml version="1.0" encoding="UTF-8"?><FirmaDocumentoRequest id="{}"><xml_dte><![CDATA[{}]]></xml_dte></FirmaDocumentoRequest>'.format(uuid_factura, xml_sin_firma)
                     r = requests.post('https://'+request_url_firma+'api.soluciones-mega.com/api/solicitaFirma', data=data.encode('utf-8'), headers=headers)
-                    logging.warn(r.text)
+                    logging.warning(r.text)
                     resultadoXML = etree.XML(bytes(r.text, encoding='utf-8'))
                     if len(resultadoXML.xpath("//xml_dte")) > 0:
                         xml_con_firma = html.unescape(resultadoXML.xpath("//xml_dte")[0].text)
 
                         headers = { "Content-Type": "application/xml", "authorization": "Bearer "+token }
                         data = '<?xml version="1.0" encoding="UTF-8"?><AnulaDocumentoXMLRequest id="{}"><xml_dte><![CDATA[{}]]></xml_dte></AnulaDocumentoXMLRequest>'.format(uuid_factura, xml_con_firma)
-                        logging.warn(data)
+                        logging.warning(data)
                         r = requests.post('https://'+request_url+'.ifacere-fel.com/'+request_path+'api/anularDocumentoXML', data=data.encode('utf-8'), headers=headers)
                         resultadoXML = etree.XML(bytes(r.text, encoding='utf-8'))
 
