@@ -26,7 +26,7 @@ class AccountMove(models.Model):
 
     def certificar(self):
         for factura in self:
-            if factura.requiere_certificacion():
+            if factura.requiere_certificacion('megaprint'):
                 self.ensure_one()
                 
                 if factura.error_pre_validacion():
@@ -166,4 +166,4 @@ class ResCompany(models.Model):
     usuario_fel = fields.Char('Usuario FEL')
     clave_fel = fields.Char('Clave FEL')
     pruebas_fel = fields.Boolean('Modo de Pruebas FEL')
-    
+    certificador_fel = fields.Selection(selection_add=[('megaprint', 'Megaprint')])    

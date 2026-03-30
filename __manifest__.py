@@ -2,10 +2,10 @@
 
 {
     'name': 'FEL Megaprint',
-    'version': '1.4',
+    'version': '1.5',
     'category': 'Custom',
     'description': """ Integración con factura electrónica de Megaprint """,
-    'author': 'Rodrigo Fernandez',
+    'author': 'aquíH',
     'website': 'http://www.aquih.com/',
     'depends': ['fel_gt'],
     'data': [
