@@ -2,7 +2,7 @@
 
 {
     'name': 'FEL Megaprint',
-    'version': '1.5',
+    'version': '1.6',
     'category': 'Custom',
     'description': """ Integración con factura electrónica de Megaprint """,
     'author': 'aquíH',
